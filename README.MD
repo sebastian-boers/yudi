@@ -51,10 +51,24 @@ python app.py
 
 Or use Docker:
 
+Build the image:
+
 ```bash
 docker build -t discogs-video-app .
+```
+
+Run in the foreground (for development and debugging):
+
+```bash
 docker run -p 5000:5000 --env-file .env discogs-video-app
 ```
+
+Run in the background (detached mode):
+
+```bash
+docker run -d -p 5000:5000 --env-file .env discogs-video-app
+```
+
 
 5. Open your browser and go to:  
 `http://localhost:5000`
