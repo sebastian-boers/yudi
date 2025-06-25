@@ -1,4 +1,4 @@
-# YUDI - Your Ultimate Discogs Music Roulette
+# YUDI - Your Discogs Music Roulette
 
 YUDI is a Flask-based web app that lets you discover random music videos from Discogs releases filtered by release year, style, and country.  
 Powered by the Discogs API and embedded YouTube videos, it provides a fun way to explore music styles and artists.
@@ -7,8 +7,7 @@ Powered by the Discogs API and embedded YouTube videos, it provides a fun way to
 
 ## Features
 
-- Filter random music videos by Release Year, Style, and Country  
-- Autocomplete dropdowns for Style and Country fields powered by static JSON data  
+- Filter random music videos by Release Year, Style, and Country
 - Clickable links to the album and record label on Discogs  
 - Clean, retro-inspired UI with a gem icon and smooth interactions  
 - Reroll button to fetch another random video with the same filters  
