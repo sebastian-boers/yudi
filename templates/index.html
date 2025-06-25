@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>YUDI</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&family=Tilt+Neon&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      background: #fefcf7;
+      font-family: 'IBM Plex Mono', monospace;
+      color: #222;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    header {
+      font-size: 2.2rem;
+      font-family: 'Tilt Neon', cursive;
+      color: #003366;
+      margin: 1rem;
+      text-align: center;
+    }
+    .gem {
+      width: 60px;
+      height: 80px;
+      margin: 1rem;
+      background: url('/static/gem-icon.png') no-repeat center center;
+      background-size: contain;
+      filter: drop-shadow(0 0 3px #40e0d0);
+    }
+    form {
+      background: #fff;
+      border: 1px solid #d6d3ce;
+      border-radius: 8px;
+      padding: 1rem;
+      width: 300px;
+      box-sizing: border-box;
+      position: relative;
+    }
+    input, button {
+      font-family: 'IBM Plex Mono', monospace;
+      width: 100%;
+      margin-bottom: 1rem;
+      padding: 0.5rem;
+      border-radius: 6px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+    input:focus {
+      outline: none;
+      border-color: #ccc;  /* No color change */
+      box-shadow: none;    /* No glow */
+    }
+    button {
+      background: #3c6e91;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+    button:hover {
+      background: #2f5571;
+    }
+    .video-wrapper {
+      max-width: 560px;
+      margin: 1rem auto;
+    }
+    .video-title {
+      text-align: center;
+      color: #3c6e91;
+      font-weight: 600;
+    }
+    .autocomplete-items {
+      border: 1px solid #d4d4d4;
+      border-top: none;
+      max-height: 160px;
+      overflow-y: auto;
+      background-color: #fff;
+      position: absolute;
+      width: 100%;
+      box-sizing: border-box;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.9rem;
+      z-index: 1000;
+    }
+    .autocomplete-item {
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    .autocomplete-item:hover {
+      background-color: #e9e9e9;
+    }
+    .form-group {
+      position: relative;
+      margin-bottom: 1.5rem;
+    }
+    .autocomplete-active {
+      background-color: #e9e9e9;
+    }
+  </style>
+</head>
+<body>
+  <div class="gem"></div>
+  <header></header>
+
+  <form method="POST" action="/" autocomplete="off">
+    <div class="form-group">
+      <input type="number" name="year" placeholder="Release Year" />
+    </div>
+    <div class="form-group" style="z-index: 1001;">
+      <input type="text" name="style" id="style" placeholder="Style" autocomplete="off" />
+    </div>
+    <div class="form-group" style="z-index: 1000;">
+      <input type="text" name="country" id="country" placeholder="Country" autocomplete="off" />
+    </div>
+    <button type="submit">Get Random Video</button>
+  </form>
+
+  {% if session.year or session.style or session.country %}
+  <form method="POST" action="/">
+    <input type="hidden" name="reroll" value="true" />
+    <button type="submit">🎲 Re-roll</button>
+  </form>
+  {% endif %}
+
+  {% if video %}
+    {% if video.error %}
+      <p style="color:red;">{{ video.error }}</p>
+    {% else %}
+      <div class="video-wrapper">
+        <iframe width="560" height="315" src="{{ video.video_url | replace('watch?v=', 'embed/') }}" frameborder="0" allowfullscreen></iframe>
+        <p class="video-title">
+          {{ video.video_title }} — {{ video.title }}
+          {% if video.release_url %}
+            &nbsp;|&nbsp;
+            <a href="{{ video.release_url }}" target="_blank" rel="noopener noreferrer">Album</a>
+          {% endif %}
+          {% if video.label_name and video.label_url %}
+            &nbsp;|&nbsp;
+            <a href="{{ video.label_url }}" target="_blank" rel="noopener noreferrer">Label</a>
+          {% endif %}
+        </p>
+      </div>
+    {% endif %}
+  {% endif %}
+
+  <script>
+    function setupAutocomplete(inputId, dataUrl) {
+      const input = document.getElementById(inputId);
+      const containerId = inputId + '-autocomplete-list';
+  
+      // Create autocomplete container once
+      let autocompleteContainer = document.createElement('div');
+      autocompleteContainer.setAttribute('id', containerId);
+      autocompleteContainer.setAttribute('class', 'autocomplete-items');
+      autocompleteContainer.style.position = 'absolute';
+      autocompleteContainer.style.zIndex = '1000';
+      input.parentNode.style.position = 'relative';
+      input.parentNode.appendChild(autocompleteContainer);
+  
+      let data = [];
+      let currentFocus = -1;
+  
+      // Fetch autocomplete data once
+      fetch(dataUrl)
+        .then(res => res.json())
+        .then(json => data = json)
+        .catch(() => data = []);
+  
+      function closeAllLists() {
+        autocompleteContainer.innerHTML = '';
+        currentFocus = -1;
+      }
+  
+      function addActive(items) {
+        if (!items) return false;
+        removeActive(items);
+        if (currentFocus >= items.length) currentFocus = 0;
+        if (currentFocus < 0) currentFocus = items.length - 1;
+        items[currentFocus].classList.add("autocomplete-active");
+        // Scroll into view for long lists
+        items[currentFocus].scrollIntoView({ block: "nearest" });
+      }
+  
+      function removeActive(items) {
+        for (let i = 0; i < items.length; i++) {
+          items[i].classList.remove("autocomplete-active");
+        }
+      }
+  
+      input.addEventListener("input", function() {
+        const val = this.value.toLowerCase();
+        closeAllLists();
+  
+        if (!val) return;
+  
+        const matches = data.filter(item => item.toLowerCase().startsWith(val)).slice(0, 5);
+  
+        matches.forEach(match => {
+          const item = document.createElement("div");
+          item.classList.add("autocomplete-item");
+          item.innerHTML = `<strong>${match.substr(0, val.length)}</strong>${match.substr(val.length)}`;
+          item.addEventListener("click", function() {
+            input.value = match;
+            closeAllLists();
+            input.focus();
+          });
+          autocompleteContainer.appendChild(item);
+        });
+      });
+  
+      input.addEventListener("keydown", function(e) {
+        let items = autocompleteContainer.getElementsByClassName("autocomplete-item");
+        if (!items) return;
+  
+        if (e.key === "ArrowDown") {
+          currentFocus++;
+          addActive(items);
+          e.preventDefault();
+        } else if (e.key === "ArrowUp") {
+          currentFocus--;
+          addActive(items);
+          e.preventDefault();
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          if (currentFocus > -1) {
+            if (items[currentFocus]) {
+              items[currentFocus].click();
+            }
+          }
+        } else if (e.key === "Escape") {
+          closeAllLists();
+        }
+      });
+  
+      // Close dropdown when clicking outside input or dropdown
+      document.addEventListener("click", function(e) {
+        if (e.target !== input && !autocompleteContainer.contains(e.target)) {
+          closeAllLists();
+        }
+      });
+    }
+  
+    setupAutocomplete('style', '/static/styles.json');
+    setupAutocomplete('country', '/static/countries.json');
+  </script>
+</body>
+</html>
