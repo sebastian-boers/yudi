@@ -34,8 +34,7 @@ cd yudi
 2. Create a `.env` file in the root folder and add your Discogs API token:
 
 ```env
-touch .env
-echo 'DISCOGS_TOKEN=your_discogs_api_token_here' | tee .env
+echo 'DISCOGS_TOKEN=your_discogs_api_token_here' > .env
 ```
 
 3. Install dependencies:
