@@ -31,10 +31,8 @@ git clone https://github.com/sebastian-boers/yudi.git
 cd yudi
 Create a .env file in the root folder and add your Discogs API token:
 
-ini
-Copy
-Edit
 DISCOGS_TOKEN=your_discogs_api_token_here
+
 Install dependencies:
 
 bash
