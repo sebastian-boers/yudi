@@ -28,7 +28,8 @@ Powered by the Discogs API and embedded YouTube videos, it provides a fun way to
 
 ```bash
 git clone https://github.com/sebastian-boers/yudi.git
-cd yudi
+cd yudi´´´
+
 Create a .env file in the root folder and add your Discogs API token:
 
 DISCOGS_TOKEN=your_discogs_api_token_here
