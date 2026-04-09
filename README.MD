@@ -31,10 +31,11 @@ git clone https://github.com/sebastian-boers/yudi.git
 cd yudi
 ```
 
-2. Create a `.env` file in the root folder and add your Discogs API token:
+2. Create a `.env` file in the root folder and add your Discogs API token plus a Flask secret key:
 
-```env
-echo 'DISCOGS_TOKEN=your_discogs_api_token_here' > .env
+```bash
+echo DISCOGS_TOKEN=your_discogs_api_token_here > .env
+echo SECRET_KEY=your-secret-key >> .env
 ```
 
 3. Install dependencies:

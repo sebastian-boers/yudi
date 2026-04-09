@@ -117,13 +117,13 @@
   <div class="gem"></div>
   <form method="POST" action="/" autocomplete="off">
     <div class="form-group">
-      <input type="number" name="year" placeholder="Release Year" />
+      <input type="number" name="year" placeholder="Release Year" value="{{ session.year or '' }}" />
     </div>
     <div class="form-group" style="z-index: 1001;">
-      <input type="text" name="style" id="style" placeholder="Style" autocomplete="off" />
+      <input type="text" name="style" id="style" placeholder="Style" autocomplete="off" value="{{ session.style or '' }}" />
     </div>
     <div class="form-group" style="z-index: 1000;">
-      <input type="text" name="country" id="country" placeholder="Country" autocomplete="off" />
+      <input type="text" name="country" id="country" placeholder="Country" autocomplete="off" value="{{ session.country or '' }}" />
     </div>
     <button type="submit">Get Random Video</button>
   </form>
@@ -140,7 +140,7 @@
       <p style="color:red;">{{ video.error }}</p>
     {% else %}
       <div class="video-wrapper">
-        <iframe width="560" height="315" src="{{ video.video_url | replace('watch?v=', 'embed/') }}" frameborder="0" allowfullscreen></iframe>
+        <iframe width="560" height="315" src="{{ video.video_embed_url }}" frameborder="0" allowfullscreen></iframe>
       </div>
       
       <p class="video-title">
