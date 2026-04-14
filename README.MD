@@ -112,9 +112,3 @@ Dockerfile            # Docker container setup
 This project is inspired by and dedicated to my late friend **Robin Sääf** ([robinsaaf](https://github.com/robinsaaf)),  
 who first came up with the music roulette idea.  
 His creativity and passion continue to inspire this work.
-
----
-
-## License
-
-MIT License © Sebastian Boers
