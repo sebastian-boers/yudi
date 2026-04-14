@@ -3,6 +3,8 @@
 YUDI is a Flask-based web app that lets you discover random music videos from Discogs releases filtered by release year, style, and country.  
 Powered by the Discogs API and embedded YouTube videos, it provides a fun way to explore music styles and artists.
 
+- Flask part is vibe coded
+
 ---
 
 ## Features
