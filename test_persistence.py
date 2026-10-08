@@ -85,7 +85,8 @@ class PersistenceTests(unittest.TestCase):
         expired = self.client.get('/').get_data(as_text=True)
         self.assertEqual(len(self.calls), calls)
         self.assertNotIn('Album title', expired)
-        self.assertNotIn('>Label</a>', expired)
+        # Label identity is a retained history reference, not stale metadata.
+        self.assertIn('>Label</a>', expired)
         refreshed = self.post(action='replay', video_id=vid).get_data(as_text=True)
         self.assertEqual(len(self.calls), calls+1)
         self.assertIn('Album title', refreshed)

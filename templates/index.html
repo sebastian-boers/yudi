@@ -189,7 +189,7 @@
       </div>
       
       <p class="video-title">
-        {{ video.video_title }}{% if video.title and video.title not in video.video_title %} — {{ video.title }}{% endif %}
+        {{ video.video_title }}{% if video.title %} — {{ video.title }}{% endif %}
         {% if video.release_url %}
           &nbsp;|&nbsp;
           <a href="{{ video.release_url }}" target="_blank" rel="noopener noreferrer">Album</a>

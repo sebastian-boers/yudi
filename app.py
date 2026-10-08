@@ -212,7 +212,11 @@ def discogs_api_request(url: str, params: dict = None, budget=None):
                 if '/releases/' in url and not any(extract_youtube_embed_url(v.get('uri')) for v in data.get('videos', []) if isinstance(v, dict)):
                     ttl = min(ttl, policy('YUDI_NO_VIDEO_TTL', 900))
                 cc = headers.get('Cache-Control', '').lower()
-                if any(item in cc for item in ('no-store', 'no-cache', 'private')) or headers.get('Vary'):
+                # requests decodes the transport representation before JSON
+                # parsing. Encoding does not vary the cached JSON content;
+                # unknown Vary dimensions still fail closed.
+                vary = {item.strip().lower() for item in headers.get('Vary', '').split(',') if item.strip()}
+                if any(item in cc for item in ('no-store', 'no-cache', 'private')) or vary - {'accept-encoding'}:
                     ttl = 0
                 ages = re.findall(r'(?:s-maxage|max-age)\s*=\s*"?(\d+)', cc)
                 if ages:
@@ -300,10 +304,14 @@ def clip_view(entry):
     title = title or entry.get('display_title') or f'Discogs release #{rid}'
     labels = data.get('labels', [])
     label = labels[0] if labels else {}
+    label_url = discogs_api_to_public_url(label.get('resource_url'))
+    if label_url and entry.get('browser') and entry.get('label_reference') != label_url:
+        store().remember_label(entry['browser'], vid, label_url)
+    label_url = label_url or entry.get('label_reference')
     return dict(video_id=vid, video_embed_url=f'https://www.youtube.com/embed/{vid}',
                 video_url=f'https://www.youtube.com/watch?v={vid}', video_title=title,
-                title=data.get('title') or '', label_name=label.get('name'),
-                label_url=discogs_api_to_public_url(label.get('resource_url')),
+                title=data.get('title') or '', label_name=label.get('name') or ('Label' if label_url else None),
+                label_url=label_url,
                 release_url=discogs_api_to_public_url(data.get('master_url')) or f'https://www.discogs.com/release/{rid}')
 
 
