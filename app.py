@@ -276,17 +276,33 @@ def cache_key(url, params=None):
     return json.dumps([hashlib.sha256(DISCOGS_TOKEN.encode()).hexdigest(), url, params or {}], sort_keys=True)
 
 
+def readable_clip_title(data, vid):
+    """Use catalogue text, not machine identifiers or URL placeholders."""
+    def text(value):
+        return value.strip()[:500] if isinstance(value, str) else ''
+    videos = data.get('videos', [])
+    title = next((text(v.get('title')) for v in videos if extract_youtube_embed_url(v.get('uri')) == f'https://www.youtube.com/embed/{vid}'), '')
+    if title and title != vid and not title.startswith(('http://', 'https://')):
+        return title
+    release = text(data.get('title'))
+    artists = data.get('artists', [])
+    artists = ', '.join(text(a.get('name')) for a in artists if isinstance(a, dict) and text(a.get('name'))) if isinstance(artists, list) else ''
+    return f'{artists} — {release}' if artists and release else release or artists
+
+
 def clip_view(entry):
     """GET never refreshes upstream. Omit expired catalogue labels, keep references."""
     vid, rid = entry['video'], entry['release']
     data = store().cached(cache_key(f'https://api.discogs.com/releases/{rid}')) or {}
-    videos = data.get('videos', [])
-    title = next((v.get('title') for v in videos if extract_youtube_embed_url(v.get('uri')) == f'https://www.youtube.com/embed/{vid}'), None)
+    title = readable_clip_title(data, vid)
+    if title and entry.get('browser') and entry.get('display_title') != title:
+        store().remember_title(entry['browser'], vid, title)
+    title = title or entry.get('display_title') or f'Discogs release #{rid}'
     labels = data.get('labels', [])
     label = labels[0] if labels else {}
     return dict(video_id=vid, video_embed_url=f'https://www.youtube.com/embed/{vid}',
-                video_url=f'https://www.youtube.com/watch?v={vid}', video_title=title or vid,
-                title=data.get('title') or 'Release', label_name=label.get('name'),
+                video_url=f'https://www.youtube.com/watch?v={vid}', video_title=title,
+                title=data.get('title') or '', label_name=label.get('name'),
                 label_url=discogs_api_to_public_url(label.get('resource_url')),
                 release_url=discogs_api_to_public_url(data.get('master_url')) or f'https://www.discogs.com/release/{rid}')
 
@@ -340,7 +356,8 @@ def select_clip(browser, filters, budget=None):
                 state = {'filters': filters, 'current': vid}
                 if budget.remaining() <= 0:
                     return {'error': 'Selection deadline reached — No new clip found yet.'}
-                if db.reserve(browser, vid, rid, filters, state, deadline=budget.end):
+                display_title = readable_clip_title(data, vid) if data.get('_yudi_expires', 0) > time.time() else None
+                if db.reserve(browser, vid, rid, filters, state, deadline=budget.end, display_title=display_title):
                     return {'video': vid}
     return {'error': 'No new clip found yet — try broader filters or search again. History has not been reset.'}
 

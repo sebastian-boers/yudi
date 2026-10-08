@@ -122,6 +122,35 @@
       font-size: 1rem;
       background: #fff;
     }
+    .recent-history {
+      width: min(300px, calc(100vw - 24px));
+      font-size: 0.8rem;
+      margin: 0.2rem 0 0.8rem;
+    }
+    .recent-history summary {
+      cursor: pointer;
+      color: #3c6e91;
+      padding: 0.25rem 0;
+    }
+    .history-controls {
+      width: 100%;
+      padding: 0.5rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.3rem;
+    }
+    .history-controls select {
+      grid-column: 1 / -1;
+      font-size: 0.8rem;
+      padding: 0.35rem;
+      margin: 0;
+      min-width: 0;
+    }
+    .history-controls button {
+      font-size: 0.8rem;
+      padding: 0.35rem;
+      margin: 0;
+    }
   </style>
 </head>
 <body>
@@ -160,7 +189,7 @@
       </div>
       
       <p class="video-title">
-        {{ video.video_title }} — {{ video.title }}
+        {{ video.video_title }}{% if video.title and video.title not in video.video_title %} — {{ video.title }}{% endif %}
         {% if video.release_url %}
           &nbsp;|&nbsp;
           <a href="{{ video.release_url }}" target="_blank" rel="noopener noreferrer">Album</a>
@@ -175,17 +204,19 @@
   {% endif %}
 
   {% if history %}
-  <form method="POST" action="/">
+  <details class="recent-history">
+    <summary>Recent clips ({{ history|length }})</summary>
+    <form class="history-controls" method="POST" action="/">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
-    <label for="recent-clips">Recent clips (selected, not necessarily played)</label>
-    <select id="recent-clips" name="video_id">
+    <select id="recent-clips" name="video_id" aria-label="Recent clips" title="Previously selected clips">
       {% for clip in history %}
-      <option value="{{ clip.video_id }}"{% if video and clip.video_id == video.video_id %} selected{% endif %}>{{ clip.video_title }} — {{ clip.title }}</option>
+      <option value="{{ clip.video_id }}" title="{{ clip.video_title }}"{% if video and clip.video_id == video.video_id %} selected{% endif %}>{{ clip.video_title }}</option>
       {% endfor %}
     </select>
-    <button type="submit" name="action" value="replay">Play selected</button>
+    <button type="submit" name="action" value="replay">Play</button>
     <button type="submit" name="action" value="clear">Clear history</button>
   </form>
+  </details>
   {% endif %}
 
   <script>

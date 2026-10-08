@@ -17,6 +17,7 @@ class Store:
             CREATE TABLE IF NOT EXISTS browsers (id TEXT PRIMARY KEY, state TEXT, touched REAL);
             CREATE TABLE IF NOT EXISTS history (browser TEXT, video TEXT, release INTEGER, filters TEXT, selected REAL, recent REAL, PRIMARY KEY(browser,video));
             CREATE INDEX IF NOT EXISTS history_recent ON history(browser,recent DESC);
+            CREATE TABLE IF NOT EXISTS clip_titles (browser TEXT, video TEXT, title TEXT, PRIMARY KEY(browser,video));
             ''')
 
     @contextmanager
@@ -43,19 +44,20 @@ class Store:
             cutoff = time.time()-days*86400
             db.execute('DELETE FROM history WHERE recent<?', (cutoff,))
             db.execute('DELETE FROM browsers WHERE touched<?', (cutoff,))
+            db.execute('DELETE FROM clip_titles WHERE NOT EXISTS (SELECT 1 FROM history WHERE history.browser=clip_titles.browser AND history.video=clip_titles.video)')
             db.execute('DELETE FROM cache WHERE expires<=?', (time.time(),))
 
     def history(self, browser, limit=100):
         with self.connection() as db:
-            rows = db.execute('SELECT * FROM history WHERE browser=? ORDER BY recent DESC LIMIT ?', (browser, limit)).fetchall()
+            rows = db.execute('SELECT h.*, t.title AS display_title FROM history h LEFT JOIN clip_titles t ON t.browser=h.browser AND t.video=h.video WHERE h.browser=? ORDER BY h.recent DESC LIMIT ?', (browser, limit)).fetchall()
         return [dict(row) for row in rows]
 
     def entry(self, browser, video):
         with self.connection() as db:
-            row = db.execute('SELECT * FROM history WHERE browser=? AND video=?', (browser, video)).fetchone()
+            row = db.execute('SELECT h.*, t.title AS display_title FROM history h LEFT JOIN clip_titles t ON t.browser=h.browser AND t.video=h.video WHERE h.browser=? AND h.video=?', (browser, video)).fetchone()
         return dict(row) if row else None
 
-    def reserve(self, browser, video, release, filters, state, deadline=None):
+    def reserve(self, browser, video, release, filters, state, deadline=None, display_title=None):
         with self.connection() as db:
             db.execute('BEGIN IMMEDIATE')
             if deadline is not None and time.monotonic() >= deadline:
@@ -64,6 +66,8 @@ class Store:
             inserted = db.execute('INSERT OR IGNORE INTO history VALUES (?,?,?,?,?,?)', (browser, video, release, json.dumps(filters, sort_keys=True), now, now)).rowcount
             if inserted:
                 db.execute('INSERT OR REPLACE INTO browsers VALUES (?,?,?)', (browser, json.dumps(state), now))
+                if display_title:
+                    db.execute('INSERT OR REPLACE INTO clip_titles VALUES (?,?,?)', (browser, video, display_title))
             if deadline is not None and time.monotonic() >= deadline:
                 db.rollback()
                 return False
@@ -81,7 +85,12 @@ class Store:
         with self.connection() as db:
             db.execute('BEGIN IMMEDIATE')
             db.execute('DELETE FROM history WHERE browser=?', (browser,))
+            db.execute('DELETE FROM clip_titles WHERE browser=?', (browser,))
             db.execute('INSERT OR REPLACE INTO browsers VALUES (?,?,?)', (browser, json.dumps(state), time.time()))
+
+    def remember_title(self, browser, video, title):
+        with self.connection() as db:
+            db.execute('INSERT OR REPLACE INTO clip_titles SELECT browser, video, ? FROM history WHERE browser=? AND video=?', (title, browser, video))
 
     def lease(self, key, owner, seconds):
         with self.connection() as db:
