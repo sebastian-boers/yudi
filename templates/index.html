@@ -111,11 +111,23 @@
     .autocomplete-active {
       background-color: #e9e9e9;
     }
+    select {
+      font-family: 'IBM Plex Mono', monospace;
+      width: 100%;
+      margin-bottom: 0.2rem;
+      padding: 0.5rem;
+      border-radius: 6px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      background: #fff;
+    }
   </style>
 </head>
 <body>
   <div class="gem"></div>
   <form method="POST" action="/" autocomplete="off">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
     <div class="form-group">
       <input type="number" name="year" placeholder="Release Year" value="{{ session.year or '' }}" />
     </div>
@@ -128,13 +140,17 @@
     <button type="submit">Get Random Video</button>
   </form>
 
-  {% if session.year or session.style or session.country %}
+  {% if video or session.year or session.style or session.country %}
   <form method="POST" action="/">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
     <input type="hidden" name="reroll" value="true" />
     <button type="submit">🎲 Re-roll</button>
   </form>
   {% endif %}
 
+  {% if message %}
+    <p style="color:red;">{{ message }}</p>
+  {% endif %}
   {% if video %}
     {% if video.error %}
       <p style="color:red;">{{ video.error }}</p>
@@ -156,6 +172,20 @@
       </p>
       </div>
     {% endif %}
+  {% endif %}
+
+  {% if history %}
+  <form method="POST" action="/">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+    <label for="recent-clips">Recent clips (selected, not necessarily played)</label>
+    <select id="recent-clips" name="video_id">
+      {% for clip in history %}
+      <option value="{{ clip.video_id }}"{% if video and clip.video_id == video.video_id %} selected{% endif %}>{{ clip.video_title }} — {{ clip.title }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" name="action" value="replay">Play selected</button>
+    <button type="submit" name="action" value="clear">Clear history</button>
+  </form>
   {% endif %}
 
   <script>

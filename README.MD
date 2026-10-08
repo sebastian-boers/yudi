@@ -109,6 +109,29 @@ Dockerfile            # Docker container setup
 
 ---
 
+## Persistent cache and recent clips
+
+The existing design, filters, autocomplete and player are retained. Recent-clips replay/clear controls are additive. Random selection excludes canonical YouTube IDs remembered by this browser across filter changes; explicit replay deliberately permits a repeat. GET/reload restores the current selection without discovery. History records selected/shown clips, not verified playback, and does not synchronize devices or survive clearing the browser cookie.
+
+Set `YUDI_DATA_DIR` to a private persistent writable directory outside the source checkout. In the homelab this is `/var/lib/yudi`; preserve it and the stable `SECRET_KEY` across releases. SQLite shares cached catalogue data, cache-miss leases, cooldowns and history between workers. No credentials are stored in the database; API credential contexts are represented by a digest.
+
+Defaults (environment variables or Flask configuration):
+
+| Setting | Default |
+|---|---|
+| `YUDI_REQUEST_BUDGET` / `YUDI_SELECTION_SECONDS` | 20 upstream requests / 15 seconds per selection |
+| `YUDI_REQUEST_TIMEOUT` / `YUDI_RETRIES` | 5 seconds / 1 transient retry within the same budget |
+| `YUDI_SEARCH_TTL` / `YUDI_RELEASE_TTL` / `YUDI_NO_VIDEO_TTL` | 900 / 3600 / 900 seconds, shortened or disabled by upstream headers |
+| `YUDI_CACHE_ENTRIES` | 2000 catalogue entries |
+| `YUDI_HISTORY_DAYS` / `YUDI_COOKIE_DAYS` | 90 days |
+| `YUDI_HISTORY_DISPLAY` | Latest 100 distinct clips; not the exclusion-set limit |
+| `YUDI_MAX_PAGES` / `YUDI_PAGE_ATTEMPTS` | 100 / 10, still bounded by request/time budgets |
+| `YUDI_COOLDOWN_SECONDS` / `YUDI_MAX_COOLDOWN_SECONDS` | 60 / 3600; shared 429 cooldown using Retry-After when supplied |
+
+No numeric Discogs quota or catalogue-wide uniformity is assumed. Metadata expiry does not reset repeat exclusions; expired labels are omitted until refreshed. A discovery-budget failure is not catalogue exhaustion and never silently resets history. Private personalized responses use no-store; cached replay needs no upstream call while its release metadata is fresh.
+
+For repeatable Debian13/CPython3.13/Linux-x86_64 installation, use `pip install --require-hashes -r requirements.lock` in a dedicated venv. Other platforms must deliberately resolve their own compatible lock. Run `python -m unittest discover -p 'test_*.py' -v`: tests use real Flask/SQLite with mocked external HTTP, not production credentials. Use Gunicorn for production, not Flask's development server. Docker users must mount a persistent `YUDI_DATA_DIR` and keep signing keys outside the image; the homelab uses native systemd/nginx, not Docker.
+
 ## Honorable Mention
 
 This project is inspired by and dedicated to my late friend **Robin Sääf** ([robinsaaf](https://github.com/robinsaaf)),  
