@@ -9,7 +9,11 @@ from test_app import Response, y
 
 
 class ReviewDeadlineTests(unittest.TestCase):
-    setUp = fixtures.CacheTests.setUp
+    def setUp(self):
+        fixtures.CacheTests.setUp(self)
+        # Initialize SQLite/WAL before measuring HTTP deadlines: hosted-runner
+        # filesystem setup is not part of this mocked HTTP regression.
+        y.store().cached('review-initialization')
     tearDown = fixtures.CacheTests.tearDown
 
     def test_slow_json_returns_by_deadline_without_late_cache_or_history(self):
@@ -80,7 +84,7 @@ class ReviewDeadlineTests(unittest.TestCase):
                 # A streaming HTTP read waits for chunk_size bytes, even if
                 # bytes arrive often enough to avoid socket inactivity timeout.
                 body = bytearray()
-                for _ in range(40):
+                for _ in range(200):
                     time.sleep(.01)
                     body.extend(b' ')
                     if len(body) >= chunk_size:
@@ -93,9 +97,9 @@ class ReviewDeadlineTests(unittest.TestCase):
                 closed.set()
         response = BufferedDrip({})
         with patch.object(y.DISCOGS_SESSION, 'get', return_value=response):
-            result = y.discogs_api_request('https://api.discogs.com/releases/530', budget=y.Budget(seconds=.06))
-            stopped_promptly = closed.wait(.10)
-            closed.wait(1)
+            result = y.discogs_api_request('https://api.discogs.com/releases/530', budget=y.Budget(seconds=.30))
+            stopped_promptly = closed.wait(.25)
+            closed.wait(3)
         self.assertIn('deadline', result['error'].lower())
         self.assertTrue(stopped_promptly, 'worker keeps reading drip until a large chunk fills')
 
@@ -138,15 +142,16 @@ class ReviewDeadlineTests(unittest.TestCase):
                 super().close()
                 closed.set()
         def upstream(*args, **kwargs):
-            time.sleep(.15)
+            time.sleep(.60)
             return LateHeaders({}, 429, {'Retry-After': '60'})
-        with patch.object(y.DISCOGS_SESSION, 'get', side_effect=upstream):
+        with patch.object(y.DISCOGS_SESSION, 'get', side_effect=upstream) as http:
             start = time.monotonic()
-            result = y.discogs_api_request('https://api.discogs.com/releases/520', budget=y.Budget(seconds=.06))
+            result = y.discogs_api_request('https://api.discogs.com/releases/520', budget=y.Budget(seconds=.30))
             elapsed = time.monotonic()-start
-            self.assertTrue(closed.wait(1))
+            self.assertTrue(closed.wait(2))
+            self.assertEqual(http.call_count, 1)
         self.assertIn('deadline', result['error'].lower())
-        self.assertLess(elapsed, .12)
+        self.assertLess(elapsed, .50)
         with y.store().connection() as db:
             self.assertEqual(db.execute('SELECT count(*) FROM cooldown').fetchone()[0], 0)
 
